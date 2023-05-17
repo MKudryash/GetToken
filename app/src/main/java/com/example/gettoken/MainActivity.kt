@@ -32,86 +32,67 @@ class MainActivity : AppCompatActivity() {
     fun SetListener() {
         binding.btnSend.setOnClickListener()
         {
-            if (!flag) SendCode()
-            else SendCode()
+            SendEmail()
+        }
+        binding.btnSendCode.setOnClickListener()
+        {
+            SendCode()
         }
     }
 
-    fun getCatalog() {
-        val api = Retrofit.Builder()
-            .baseUrl("https://medic.madskill.ru")
-            .addConverterFactory(GsonConverterFactory.create())
+    fun SendEmail() {
+        val interceptor = HttpLoggingInterceptor()
+        interceptor.level = HttpLoggingInterceptor.Level.BODY
+        val httpClient = OkHttpClient.Builder()
+            .addInterceptor(interceptor)
             .build()
-            .create(ApiRequest::class.java)
+        val retrofit = Retrofit.Builder()
+            .addConverterFactory(GsonConverterFactory.create())
+            .baseUrl("https://medic.madskill.ru")
+            .client(httpClient)
+            .build()
+        val requestApi = retrofit.create(ApiRequest::class.java)
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val response = api.getNews().awaitResponse()
+                val response =
+                    requestApi.postEmail(binding.txtEmail.text.toString()).awaitResponse()
+                Log.d("Response", "success")
+                flag = true
+            } catch (e: Exception) {
+                Log.d(ContentValues.TAG, e.toString())
+            }
+        }
+    }
+
+    fun SendCode() {
+        val interceptor = HttpLoggingInterceptor()
+        interceptor.level = HttpLoggingInterceptor.Level.BODY
+
+        val httpClient = OkHttpClient.Builder()
+            .addInterceptor(interceptor)
+            .build()
+        val retrofit = Retrofit.Builder()
+            .addConverterFactory(GsonConverterFactory.create())
+            .baseUrl("https://medic.madskill.ru")
+            .client(httpClient)
+            .build()
+        val requestApi = retrofit.create(ApiRequest::class.java)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                var code = binding.txtCode.text.toString()
+                var email = binding.txtEmail.text.toString()
+                val response = requestApi.postCode(
+                    code,
+                    email
+                ).awaitResponse()
                 if (response.isSuccessful) {
                     val data = response.body()!!
                     Log.d(TAG, data.toString())
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Log.d(TAG, e.toString())
-                }
-
+                Log.d(TAG, e.toString())
             }
         }
+
     }
-
-        fun SendEmail() {
-            val interceptor = HttpLoggingInterceptor()
-            interceptor.level = HttpLoggingInterceptor.Level.BODY
-            val httpClient = OkHttpClient.Builder()
-                .addInterceptor(interceptor)
-                .build()
-            val retrofit = Retrofit.Builder()
-                .addConverterFactory(GsonConverterFactory.create())
-                .baseUrl("https://medic.madskill.ru")
-                .client(httpClient)
-                .build()
-            val requestApi = retrofit.create(ApiRequest::class.java)
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val response =
-                        requestApi.postEmail(binding.txtEmail.text.toString()).awaitResponse()
-                    Log.d("Response", "success")
-
-                } catch (e: Exception) {
-                    Log.d(ContentValues.TAG, e.toString())
-                }
-            }
-        }
-
-        fun SendCode() {
-            val interceptor = HttpLoggingInterceptor()
-            interceptor.level = HttpLoggingInterceptor.Level.BODY
-
-            val httpClient = OkHttpClient.Builder()
-                .addInterceptor(interceptor)
-                .build()
-            val retrofit = Retrofit.Builder()
-                .addConverterFactory(GsonConverterFactory.create())
-                .baseUrl("https://medic.madskill.ru")
-                .client(httpClient)
-                .build()
-            val requestApi = retrofit.create(ApiRequest::class.java)
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    var code =  binding.txtCode.text.toString()
-                    var email =  binding.txtEmail.text.toString()
-                    val response = requestApi.postCode(
-                        code,
-                        email
-                    ).awaitResponse()
-                    if (response.isSuccessful) {
-                        val data = response.body()!!
-                        Log.d(TAG, data.toString())
-                    }
-                } catch (e: Exception) {
-                    Log.d(TAG, e.toString())
-                }
-            }
-            flag = true
-        }
-    }
+}
